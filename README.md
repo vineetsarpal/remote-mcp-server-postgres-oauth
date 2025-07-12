@@ -2,21 +2,40 @@
 
 # MCP Server for PostgreSQL with GitHub OAuth
 
-This project is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server deployed on Cloudflare Workers, providing secure read and write access to a PostgreSQL database. Authentication is enforced via GitHub OAuth, ensuring only authorized users can perform sensitive operations.
+![Node.js](https://img.shields.io/badge/Node.js-v18+-green)
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange)
+
+This [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server allows to interact with a PostgreSQL database through a secure, scalable, and easy-to-deploy interface. Built on Cloudflare Workers, it enables:
+
+- **Conversational Database Access**: Query your PostgreSQL database using natural language or SQL via MCP-compatible clients like Claude Desktop
+- **Secure Authentication and Authorization**: Enforce GitHub OAuth to ensure only authorized users can access read and write operations
+- **Serverless Deployment**: Run as a lightweight, scalable Cloudflare Worker, perfect for remote MCP server setups
 
 ## Features
 
 - **GitHub OAuth Authentication:** All users must sign in with GitHub to access the server.
 - **Read Operations:** Any authenticated GitHub user can list tables and run read-only SQL queries (`SELECT`).
 - **Write Operations:** Only specific GitHub usernames (listed in `ALLOWED_USERNAMES` in the code) can perform write operations (`INSERT`, `UPDATE`, `DELETE`).
-- **Cloudflare Workers Deployment:** Easily deploy and scale using Cloudflare infrastructure.
-- **Secure Token and State Management:** Uses KV storage for secure handling of authentication state and tokens.
+- **Cloudflare Workers Deployment:** Easily deploy and scale using Cloudflare's serverless infrastructure.
+- **Secure Token and State Management:** Uses Cloudflare KV storage for secure handling of authentication state and tokens.
 
 ## Tools Provided
+
+This server exposes the following Model Context Protocol (MCP) tools:
 
 - **listTables:** Lists all tables and columns in the database. Available to all authenticated users.
 - **queryDatabase:** Executes read-only SQL queries. Only allows `SELECT` and similar operations. Available to all authenticated users.
 - **executeDatabase:** Executes any SQL statement, including write operations. Restricted to privileged GitHub users.
+
+## Architecture
+
+```mermaid
+graph LR
+    A[Client: Claude Desktop] -->|MCP Endpoint| B[Cloudflare Worker]
+    B -->|GitHub OAuth| C[Authentication]
+    B -->|PostgreSQL Queries| D[PostgreSQL Database]
+    B -->|KV Storage| E[Cloudflare KV]
+```
 
 ## Getting Started
 
@@ -29,12 +48,12 @@ This project is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io
 
 2. **Set Up GitHub OAuth:**
    - Create a GitHub OAuth App.
-   - Set the Homepage URL and Callback URL to your worker domain (e.g., `https://your-worker.<subdomain>.workers.dev`).
+   - Set the Homepage URL and Callback URL to your worker domain (e.g., `https://<your-worker>.<your-subdomain>.workers.dev`).
    - Store your Client ID and Secret using Wrangler:
      ```bash
      wrangler secret put GITHUB_CLIENT_ID
      wrangler secret put GITHUB_CLIENT_SECRET
-     wrangler secret put COOKIE_ENCRYPTION_KEY # e.g., openssl rand -hex 16
+     wrangler secret put COOKIE_ENCRYPTION_KEY # Get by runnning 'openssl rand -hex 32'
      ```
    - Configure KV Namespace:
      ```bash
@@ -43,7 +62,7 @@ This project is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io
    - Add the namespace ID to your Wrangler configuration file.
 
 3. **Set Up PostgreSQL Database:**
-   - Obtain the connection string for your PostgreSQL database (e.g., `postgresql://user:password@host:port/dbname`).
+   - Obtain the connection string for your PostgreSQL database (e.g., `postgresql://username:password@host:port/db_name`).
    - Store the database URL using Wrangler:
      ```bash
      wrangler secret put DATABASE_URL
@@ -61,22 +80,25 @@ To integrate this MCP server with Claude Desktop, follow these steps:
 
 Open Claude Desktop and navigate to Settings -> Developer -> Edit Config. This opens the configuration file that controls which MCP servers Claude can access.
 
-Replace the content with the following configuration. Once you restart Claude Desktop, a browser window will open showing your OAuth login page. Complete the authentication flow to grant Claude access to your MCP server. After you grant access, the tools will become available for you to use.
-
+Add the following configuration:
 ```
 {
   "mcpServers": {
-    "math": {
+    "postgres-oauth": {
       "command": "npx",
       "args": [
         "mcp-remote",
-        "https://mcp-github-oauth.<your-subdomain>.workers.dev/mcp"
+        "https://<your-worker>.<your-subdomain>.workers.dev/mcp"
       ]
     }
   }
 }
 ```
-Once the Tools show up in the interface, you can ask Claude to interact with your database
+Restart Claude Desktop, a browser window will open showing your OAuth login page. Complete the authentication flow to grant Claude access to your MCP server. After you grant access, the tools must become available for you to use.
+Once the Tools show up in the interface, you can ask Claude to interact with your database.
+
+### Example
+![Example](images/query-sample.png)
 
 ## Access Control
 
@@ -95,7 +117,7 @@ Once the Tools show up in the interface, you can ask Claude to interact with you
    ```
    GITHUB_CLIENT_ID=your_development_github_client_id
    GITHUB_CLIENT_SECRET=your_development_github_client_secret
-   DATABASE_URL=postgresql://user:password@host:port/dbname
+   DATABASE_URL=postgresql://username:password@host:port/db_name
    ```
 2. Run locally:
    ```bash

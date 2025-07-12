@@ -2,10 +2,7 @@ import postgres from "postgres";
 
 let dbInstance: postgres.Sql | null = null;
 
-/**
- * Get database connection singleton
- * Following the pattern from BASIC-DB-MCP.md but adapted for PostgreSQL with connection pooling
- */
+ // Get database connection singleton
 export function getDb(databaseUrl: string): postgres.Sql {
 	if (!dbInstance) {
 		dbInstance = postgres(databaseUrl, {
@@ -20,10 +17,7 @@ export function getDb(databaseUrl: string): postgres.Sql {
 	return dbInstance;
 }
 
-/**
- * Close database connection pool
- * Call this when the Durable Object is shutting down
- */
+ // Close database connection pool. Call this when the Durable Object is shutting down
 export async function closeDb(): Promise<void> {
 	if (dbInstance) {
 		try {
@@ -36,10 +30,7 @@ export async function closeDb(): Promise<void> {
 	}
 }
 
-/**
- * Execute a database operation with proper connection management
- * Following the pattern from BASIC-DB-MCP.md but adapted for PostgreSQL
- */
+ // Execute a database operation with proper connection management
 export async function withDatabase<T>(
 	databaseUrl: string,
 	operation: (db: postgres.Sql) => Promise<T>
@@ -61,10 +52,9 @@ export async function withDatabase<T>(
 	// They're returned to the pool automatically. The pool is closed when the Durable Object shuts down.
 }
 
-/**
- * SQL injection protection: Basic SQL keyword validation
- * This is a simple check - in production you should use parameterized queries
- */
+
+// SQL injection protection: Basic SQL keyword validation
+// This is a simple check - in production you should use parameterized queries
 export function validateSqlQuery(sql: string): { isValid: boolean; error?: string } {
 	const trimmedSql = sql.trim().toLowerCase();
 	
@@ -96,10 +86,9 @@ export function validateSqlQuery(sql: string): { isValid: boolean; error?: strin
 	return { isValid: true };
 }
 
-/**
- * Check if a SQL query is a write operation
- */
-export function isWriteOperation(sql: string): boolean {
+
+ // Check if a SQL query is a write operation
+ export function isWriteOperation(sql: string): boolean {
 	const trimmedSql = sql.trim().toLowerCase();
 	const writeKeywords = [
 		'insert', 'update', 'delete', 'create', 'drop', 'alter', 
@@ -109,9 +98,7 @@ export function isWriteOperation(sql: string): boolean {
 	return writeKeywords.some(keyword => trimmedSql.startsWith(keyword));
 }
 
-/**
- * Format database error for user-friendly display
- */
+// Format database error for user-friendly display
 export function formatDatabaseError(error: unknown): string {
 	if (error instanceof Error) {
 		// Hide sensitive connection details
